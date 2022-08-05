@@ -347,7 +347,7 @@ function SHA256:Encrypt(Message)
 	
 	if NumberOfZeros < 0 then
 		-- we must split into 2 blocks
-		
+		NumberOfZeros += 512 
 	end
 	
 	Phrase ..= string.rep("0", NumberOfZeros)
@@ -357,50 +357,61 @@ function SHA256:Encrypt(Message)
 	local End64Bits = string.rep("0", 64 - #PhraseSize) .. PhraseSize
 	Phrase ..= End64Bits
 
-	local Block = SplitInto32BitStrings(Phrase)
-
-	for i = 17, 64 do
-		local s0 = XOR(XOR(RightRotate(Block[i - 15], 7), RightRotate(Block[i - 15], 18)), RightShift(Block[i - 15], 3))
-		local s1 = XOR(XOR(RightRotate(Block[i - 2], 17), RightRotate(Block[i - 2], 19)), RightShift(Block[i - 2], 10))
-		
-		Block[i] = BinaryAdd(BinaryAdd(BinaryAdd(Block[i - 16], s0, true), Block[i - 7], true), s1, true)
-	end
-
 	local HashConstants	= InitialHashValues()
-	local a,b,c,d,e,f,g,h = unpack(HashConstants)
 	
-	local k = RoundConstants()
+	for BlockIndex = 1, #Phrase - 511, 512 do
+		local Block = SplitInto32BitStrings(string.sub(Phrase, BlockIndex, BlockIndex + 511))
 
-	for i = 1, 64 do
-		-- Compression rounds
-		local s0 = XOR(XOR(RightRotate(a, 2),RightRotate(a, 13)), RightRotate(a, 22))
-		local s1 = XOR(XOR(RightRotate(e, 6), RightRotate(e, 11)), RightRotate(e, 25))
-		
-		local ch = XOR(AND(e, f), AND(NOT(e), g))
+		for i = 17, 64 do
+			local s0 = XOR(XOR(RightRotate(Block[i - 15], 7), RightRotate(Block[i - 15], 18)), RightShift(Block[i - 15], 3))
+			local s1 = XOR(XOR(RightRotate(Block[i - 2], 17), RightRotate(Block[i - 2], 19)), RightShift(Block[i - 2], 10))
+			
+			Block[i] = BinaryAdd(BinaryAdd(BinaryAdd(Block[i - 16], s0, true), Block[i - 7], true), s1, true)
+		end
 
-		local t1 = BinaryAdd(BinaryAdd(BinaryAdd(BinaryAdd(h, s1, true), ch, true), k[i], true), Block[i], true)
+		local a,b,c,d,e,f,g,h = unpack(HashConstants)
 		
-		local maj = XOR(XOR(AND(a, b), AND(a, c)), AND(b, c))
-		local t2 = BinaryAdd(s0, maj, true)
+		local k = RoundConstants()
+
+		for i = 1, 64 do
+			-- Compression rounds
+			local s0 = XOR(XOR(RightRotate(a, 2),RightRotate(a, 13)), RightRotate(a, 22))
+			local s1 = XOR(XOR(RightRotate(e, 6), RightRotate(e, 11)), RightRotate(e, 25))
+			
+			local ch = XOR(AND(e, f), AND(NOT(e), g))
+
+			local t1 = BinaryAdd(BinaryAdd(BinaryAdd(BinaryAdd(h, s1, true), ch, true), k[i], true), Block[i], true)
+			
+			local maj = XOR(XOR(AND(a, b), AND(a, c)), AND(b, c))
+			local t2 = BinaryAdd(s0, maj, true)
+			
+			h = g
+			g = f
+			f = e
+			e = BinaryAdd(d, t1, true)
+			d = c
+			c = b
+			b = a
+			a = BinaryAdd(t1, t2, true)
+		end
 		
-		h = g
-		g = f
-		f = e
-		e = BinaryAdd(d, t1, true)
-		d = c
-		c = b
-		b = a
-		a = BinaryAdd(t1, t2, true)
+		local AlphabetThings = {a, b, c, d, e, f, g, h}
+		local FinalHash = ""
+
+		if (#Phrase - 511) == BlockIndex then
+			for i = 1, #HashConstants do
+				FinalHash ..= BinaryToHex(BinaryAdd(HashConstants[i], AlphabetThings[i]))
+			end
+			
+			return FinalHash
+		else
+			for i = 1, #HashConstants do
+				FinalHash ..= BinaryAdd(HashConstants[i], AlphabetThings[i])
+			end
+			
+			HashConstants = SplitInto32BitStrings(FinalHash)
+		end
 	end
-	
-	local FinalHash = ""
-	local AlphabetThings = {a, b, c, d, e, f, g, h}
-
-	for i = 1, #HashConstants do
-		FinalHash ..= BinaryToHex(BinaryAdd(HashConstants[i], AlphabetThings[i]))
-	end
-	
-	return FinalHash
 end
 
 function SHA256:Sign(Message, PrivateKey) -- returns unique signature for message
