@@ -398,14 +398,6 @@ function SHA256:Encrypt(Message)
 		local AlphabetThings = {a, b, c, d, e, f, g, h}
 		local FinalHash = ""
 		
-		for i = 1, 8 do
-			print("Alphabet Things: ",i, BinaryToHex(AlphabetThings[i]))
-		end
-		
-		for i =1,8 do
-			print("Hash constants: ", i, BinaryToHex(HashConstants[i]))
-		end
-
 		if (#Phrase - 511) == BlockIndex then
 			for i = 1, #HashConstants do
 				FinalHash ..= BinaryToHex(BinaryAdd(HashConstants[i], AlphabetThings[i], true))
@@ -422,16 +414,5 @@ function SHA256:Encrypt(Message)
 	end
 end
 
-function SHA256:Sign(Message, PrivateKey) -- returns unique signature for message
-
-end
-
-function SHA256:Verify(Message, Signature, PublicKey) -- verifies whether signature valid
-
-end
-
-function SHA256:GenerateKeys(Input)
-
-end
 
 return SHA256
