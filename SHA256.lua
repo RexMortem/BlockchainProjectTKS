@@ -358,7 +358,7 @@ function SHA256:Encrypt(Message)
 	Phrase ..= End64Bits
 
 	local HashConstants	= InitialHashValues()
-	
+
 	for BlockIndex = 1, #Phrase - 511, 512 do
 		local Block = SplitInto32BitStrings(string.sub(Phrase, BlockIndex, BlockIndex + 511))
 
@@ -368,7 +368,7 @@ function SHA256:Encrypt(Message)
 			
 			Block[i] = BinaryAdd(BinaryAdd(BinaryAdd(Block[i - 16], s0, true), Block[i - 7], true), s1, true)
 		end
-
+		
 		local a,b,c,d,e,f,g,h = unpack(HashConstants)
 		
 		local k = RoundConstants()
@@ -397,16 +397,24 @@ function SHA256:Encrypt(Message)
 		
 		local AlphabetThings = {a, b, c, d, e, f, g, h}
 		local FinalHash = ""
+		
+		for i = 1, 8 do
+			print("Alphabet Things: ",i, BinaryToHex(AlphabetThings[i]))
+		end
+		
+		for i =1,8 do
+			print("Hash constants: ", i, BinaryToHex(HashConstants[i]))
+		end
 
 		if (#Phrase - 511) == BlockIndex then
 			for i = 1, #HashConstants do
-				FinalHash ..= BinaryToHex(BinaryAdd(HashConstants[i], AlphabetThings[i]))
+				FinalHash ..= BinaryToHex(BinaryAdd(HashConstants[i], AlphabetThings[i], true))
 			end
 			
 			return FinalHash
 		else
 			for i = 1, #HashConstants do
-				FinalHash ..= BinaryAdd(HashConstants[i], AlphabetThings[i])
+				FinalHash ..= BinaryAdd(HashConstants[i], AlphabetThings[i], true)
 			end
 			
 			HashConstants = SplitInto32BitStrings(FinalHash)
